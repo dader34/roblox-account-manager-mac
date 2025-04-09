@@ -1,0 +1,23 @@
+{
+    "name": "roblox-account-manager",
+    "version": "1.0.0",
+    "description": "Roblox account manager for managing multiple accounts",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "keywords": [
+      "roblox",
+      "account",
+      "manager"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+      "node-fetch": "^2.6.7",
+      "puppeteer": "^19.7.0",
+      "puppeteer-extra": "^3.3.6",
+      "puppeteer-extra-plugin-stealth": "^2.11.2",
+      "uuid": "^9.0.0"
+    }
+  }
