@@ -5,8 +5,6 @@
  * This class provides methods for launching browsers, managing pages,
  * and handling browser-related operations.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 const puppeteer = require('puppeteer-extra');

@@ -4,12 +4,12 @@
  * @fileoverview Main entry point for the Roblox Account Manager application.
  * This file initializes the application and handles global error handling.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
+const { RobloxAccountManager } = require('./src/RobloxAccountManager');
 const { CommandLineInterface } = require('./src/cli/CommandLineInterface');
 const { logger } = require('./src/utils/logger');
+const { config } = require('./src/utils/config');
 
 /**
  * Main function to start the application
@@ -19,8 +19,22 @@ async function main() {
   try {
     logger.info('Starting Roblox Account Manager...');
     
+    // Create and initialize the manager
+    const manager = new RobloxAccountManager();
+    
+    // Initialize with API if enabled
+    await manager.initialize({
+      startApi: config.API.ENABLE,
+      apiPort: config.API.PORT
+    });
+    
+    if (config.API.ENABLE) {
+      logger.info(`API server available at http://localhost:${config.API.PORT}`);
+    }
+    
     // Create and initialize the CLI
     const cli = new CommandLineInterface();
+    cli.setAccountManager(manager); // Pass the initialized manager to the CLI
     await cli.initialize();
     
   } catch (error) {

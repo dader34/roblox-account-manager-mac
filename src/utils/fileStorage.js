@@ -4,8 +4,6 @@
  * @fileoverview Utilities for file storage operations.
  * This module provides functions for reading and writing account data.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 const fs = require('fs/promises');

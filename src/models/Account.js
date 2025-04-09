@@ -4,8 +4,6 @@
  * @fileoverview Defines the Account class that represents a Roblox account entity.
  * This class handles account-specific data and operations.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 /**
@@ -101,7 +99,10 @@ class Account {
         password: this.password,
         addedAt: this.addedAt,
         lastUsed: this.lastUsed,
-        browserTrackerId: this.browserTrackerId
+        browserTrackerId: this.browserTrackerId,
+        alias: this.alias,
+        description: this.description,
+        group: this.group
       };
     }
   }

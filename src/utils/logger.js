@@ -4,8 +4,6 @@
  * @fileoverview Logging utility for the application.
  * This module provides consistent logging functionality across the application.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 const { config } = require('./config');

@@ -4,8 +4,6 @@
  * @fileoverview Configuration settings for the Roblox Account Manager.
  * This module provides centralized configuration management.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 const path = require('path');
@@ -48,7 +46,32 @@ const config = {
    * Default browser user agent
    * @type {string}
    */
-  USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
+  USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+  
+  /**
+   * API server configuration
+   * @type {Object}
+   */
+  API: {
+    /**
+     * Whether to start the API server automatically
+     * @type {boolean}
+     */
+    ENABLE: process.env.ENABLE_API !== 'false',
+    
+    /**
+     * Port for the API server
+     * @type {number}
+     */
+    PORT: parseInt(process.env.API_PORT || '7963', 10),
+    
+    /**
+     * Password protection for the API
+     * If set, all API requests must include this password as a query parameter
+     * @type {string|null}
+     */
+    PASSWORD: process.env.API_PASSWORD || 'Whatever'
+  }
 };
 
 module.exports = { config };

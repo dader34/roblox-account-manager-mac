@@ -4,8 +4,6 @@
  * @fileoverview Command-line interface for interacting with the Roblox Account Manager.
  * This class provides a text-based user interface for managing Roblox accounts.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 const readline = require('readline');
@@ -37,7 +35,15 @@ class CommandLineInterface {
      * @type {RobloxAccountManager}
      * @private
      */
-    this.manager = new RobloxAccountManager();
+    this.manager = null;
+  }
+  
+  /**
+   * Set the account manager instance
+   * @param {Object} manager - RobloxAccountManager instance
+   */
+  setAccountManager(manager) {
+    this.manager = manager;
   }
 
   /**
@@ -47,8 +53,11 @@ class CommandLineInterface {
    */
   async initialize() {
     try {
-      // Initialize the account manager
-      await this.manager.initialize();
+      // Initialize the account manager if not already initialized
+      if (!this.manager) {
+        this.manager = new RobloxAccountManager();
+        await this.manager.initialize();
+      }
       
       // Display welcome message
       logger.info('\n=== Roblox Account Manager ===');

@@ -1,23 +1,32 @@
 {
     "name": "roblox-account-manager",
     "version": "1.0.0",
-    "description": "Roblox account manager for managing multiple accounts",
+    "description": "A tool for managing multiple Roblox accounts and launching games",
     "main": "index.js",
     "scripts": {
-      "start": "node index.js"
+      "start": "node index.js",
+      "start:api": "ENABLE_API=true node index.js",
+      "start:quiet": "QUIET_MODE=true node index.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [
       "roblox",
       "account",
-      "manager"
+      "manager",
+      "game",
+      "launcher"
     ],
-    "author": "",
+    "author": "Your Name",
     "license": "MIT",
     "dependencies": {
+      "cors": "^2.8.5",
+      "express": "^4.18.2",
       "node-fetch": "^2.6.7",
-      "puppeteer": "^19.7.0",
+      "puppeteer": "^19.7.2",
       "puppeteer-extra": "^3.3.6",
-      "puppeteer-extra-plugin-stealth": "^2.11.2",
-      "uuid": "^9.0.0"
+      "puppeteer-extra-plugin-stealth": "^2.11.2"
+    },
+    "engines": {
+      "node": ">=14.0.0"
     }
   }

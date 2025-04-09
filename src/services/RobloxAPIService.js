@@ -4,8 +4,6 @@
  * @fileoverview Service for handling all Roblox API interactions.
  * This class encapsulates all API calls to Roblox services.
  * 
- * @author Your Name
- * @version 1.0.0
  */
 
 const fetch = require('node-fetch');

@@ -1,16 +1,16 @@
-/**
+/* 
  * RobloxAccountManager.js
  * 
  * @fileoverview Main class that orchestrates the Roblox account management functionality.
  * This class serves as the primary interface for the application, coordinating between
  * the different services and handling the account management operations.
  * 
- * @author Your Name
- * @version 1.0.0
+
  */
 
 const { BrowserService } = require('./services/BrowserService');
 const { RobloxAPIService } = require('./services/RobloxAPIService');
+const { ApiInterface } = require('./api/ApiInterface');
 const { Account } = require('./models/Account');
 const { saveAccountsToFile, loadAccountsFromFile } = require('./utils/fileStorage');
 const { config } = require('./utils/config');
@@ -53,14 +53,31 @@ class RobloxAccountManager {
      * @private
      */
     this.apiService = new RobloxAPIService();
+    
+    /**
+     * API interface for handling external requests
+     * @type {ApiInterface}
+     * @private
+     */
+    this.apiInterface = null;
+    
+    /**
+     * Map of next servers to join for each account
+     * @type {Map<string, Object>}
+     * @private
+     */
+    this.nextServers = new Map();
   }
 
   /**
    * Initialize the account manager
    * @async
+   * @param {Object} options - Initialization options
+   * @param {boolean} options.startApi - Whether to start the API server
+   * @param {number} options.apiPort - Port for the API server
    * @returns {Promise<void>}
    */
-  async initialize() {
+  async initialize(options = {}) {
     try {
       // Load saved accounts from storage
       const data = await loadAccountsFromFile();
@@ -73,6 +90,11 @@ class RobloxAccountManager {
           });
           
           this.lastUsedPlaceId = data.lastUsedPlaceId || null;
+          
+          // Load next servers map if available
+          if (data.nextServers) {
+            this.nextServers = new Map(Object.entries(data.nextServers));
+          }
         } else {
           // Handle old format (just accounts)
           Object.entries(data).forEach(([key, accountData]) => {
@@ -86,10 +108,53 @@ class RobloxAccountManager {
           logger.info(`Last used Place ID: ${this.lastUsedPlaceId}`);
         }
       }
+      
+      // Initialize API server if requested
+      if (options.startApi) {
+        await this.startApiServer(options.apiPort || config.API_PORT || 8099);
+      }
     } catch (error) {
       logger.error('Initialization error:', error);
       // Create empty accounts file if it doesn't exist
       await this.saveAccounts();
+    }
+  }
+  
+  /**
+   * Start the API server
+   * @async
+   * @param {number} port - Port to listen on
+   * @returns {Promise<void>}
+   */
+  async startApiServer(port) {
+    try {
+      this.apiInterface = new ApiInterface(this, { 
+        port,
+        password: config.API.PASSWORD 
+      });
+      await this.apiInterface.initialize();
+      
+      const passwordMsg = config.API.PASSWORD 
+        ? ` (Password protected: ?Password=${config.API.PASSWORD})` 
+        : ' (No password protection)';
+      
+      logger.info(`API server started on port ${port}${passwordMsg}`);
+    } catch (error) {
+      logger.error('Failed to start API server:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Stop the API server
+   * @async
+   * @returns {Promise<void>}
+   */
+  async stopApiServer() {
+    if (this.apiInterface) {
+      await this.apiInterface.stop();
+      this.apiInterface = null;
+      logger.info('API server stopped');
     }
   }
 
@@ -106,9 +171,16 @@ class RobloxAccountManager {
         accountsData[key] = account.toJSON();
       });
       
+      // Convert Map to object for storage
+      const nextServersObj = {};
+      this.nextServers.forEach((serverInfo, accountName) => {
+        nextServersObj[accountName] = serverInfo;
+      });
+      
       const dataToSave = {
         accounts: accountsData,
-        lastUsedPlaceId: this.lastUsedPlaceId
+        lastUsedPlaceId: this.lastUsedPlaceId,
+        nextServers: nextServersObj
       };
       
       await saveAccountsToFile(dataToSave);
@@ -297,7 +369,21 @@ class RobloxAccountManager {
         return { success: false, message: `Account "${accountName}" not found` };
       }
       
-      logger.info(`Launching game for ${accountName} (PlaceID: ${placeId}, JobID: ${jobId || 'Default'})`);
+      // Check if there's a next server set for this account and place
+      let serverToJoin = jobId;
+      if (!jobId && this.nextServers.has(accountName)) {
+        const serverInfo = this.nextServers.get(accountName);
+        if (serverInfo.placeId == placeId) {
+          serverToJoin = serverInfo.jobId;
+          logger.info(`Using previously set server ${serverToJoin} for account ${accountName}`);
+          
+          // Clear the next server after using it
+          this.nextServers.delete(accountName);
+          await this.saveAccounts();
+        }
+      }
+      
+      logger.info(`Launching game for ${accountName} (PlaceID: ${placeId}, JobID: ${serverToJoin || 'Default'})`);
       
       // Generate browser tracker ID if it doesn't exist
       if (!account.browserTrackerId) {
@@ -317,7 +403,7 @@ class RobloxAccountManager {
       this.lastUsedPlaceId = placeId;
       await this.saveAccounts();
       
-      return await this.apiService.launchGame(account, placeId, jobId, followUser, joinVIP);
+      return await this.apiService.launchGame(account, placeId, serverToJoin, followUser, joinVIP);
     } catch (error) {
       logger.error('Error launching game:', error);
       return { success: false, message: `Error: ${error.message}` };
@@ -361,11 +447,106 @@ class RobloxAccountManager {
   }
 
   /**
+   * Set the next server for an account to join
+   * @param {string} accountName - Account identifier
+   * @param {string|number} placeId - Roblox place ID
+   * @param {string} jobId - Server job ID
+   * @returns {boolean} - Whether setting the server was successful
+   */
+  setNextServerForAccount(accountName, placeId, jobId) {
+    if (!this.accounts[accountName]) {
+      logger.error(`Account "${accountName}" not found`);
+      return false;
+    }
+    
+    // Store the server info
+    this.nextServers.set(accountName, {
+      placeId,
+      jobId,
+      setAt: new Date().toISOString()
+    });
+    
+    logger.info(`Set next server for ${accountName}: Place ID ${placeId}, Job ID ${jobId}`);
+    
+    // Save the updated settings
+    this.saveAccounts();
+    
+    return true;
+  }
+  
+  /**
+   * Get account alias
+   * @param {string} accountName - Account identifier
+   * @returns {string} - Account alias or empty string if not found
+   */
+  getAccountAlias(accountName) {
+    const account = this.accounts[accountName];
+    if (!account) {
+      return '';
+    }
+    
+    return account.alias || '';
+  }
+  
+  /**
+   * Get account description
+   * @param {string} accountName - Account identifier
+   * @returns {string} - Account description or empty string if not found
+   */
+  getAccountDescription(accountName) {
+    const account = this.accounts[accountName];
+    if (!account) {
+      return '';
+    }
+    
+    return account.description || '';
+  }
+  
+  /**
+   * Set account alias
+   * @param {string} accountName - Account identifier
+   * @param {string} alias - New alias
+   * @returns {boolean} - Whether setting the alias was successful
+   */
+  setAccountAlias(accountName, alias) {
+    const account = this.accounts[accountName];
+    if (!account) {
+      return false;
+    }
+    
+    account.alias = alias;
+    this.saveAccounts();
+    return true;
+  }
+  
+  /**
+   * Set account description
+   * @param {string} accountName - Account identifier
+   * @param {string} description - New description
+   * @returns {boolean} - Whether setting the description was successful
+   */
+  setAccountDescription(accountName, description) {
+    const account = this.accounts[accountName];
+    if (!account) {
+      return false;
+    }
+    
+    account.description = description;
+    this.saveAccounts();
+    return true;
+  }
+
+  /**
    * Clean up resources
    * @async
    * @returns {Promise<void>}
    */
   async close() {
+    // Stop API server if running
+    if (this.apiInterface) {
+      await this.stopApiServer();
+    }
+    
     await this.browserService.closeBrowser();
   }
 }
